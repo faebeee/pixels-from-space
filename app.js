@@ -54,10 +54,13 @@ function Game()
 }
 Game.prototype.loadStages=function()
 {
-	//this.stages.push({scouts:0, drones:0, destructors:0, mothers:1, dialogs:[]});
+	this.stages.push({scouts:0, drones:0, destructors:0, mothers:1, dialogs:[]});
 	this.stages.push({scouts:3, drones:0, destructors:0, mothers:0, dialogs:["A/D move             Click to shoot       Enter to skip message", "Enemies incomming!", "Good luck capt'n"]});
 	this.stages.push({scouts:0, drones:3, destructors:0, mothers:0, dialogs:["Drones incomming...", "GO!"]});
 	this.stages.push({scouts:0, drones:0, destructors:2, mothers:0, dialogs:["Destructorships ahead", "Fireeeeeee!"]});
+	this.stages.push({scouts:3, drones:4, destructors:1, mothers:0, dialogs:["Great. Now you'r ready for the invasion"]});
+	this.stages.push({scouts:3, drones:2, destructors:2, mothers:0, dialogs:["More enemies incomming"]});
+	this.stages.push({scouts:2, drones:6, destructors:1, mothers:1, dialogs:["Beware!"]});
 	//this.stages.push({scouts:0, drones:0, destructors:0, dialogs:[]});//to test the final screen ;-)
 
 	this.load();
@@ -95,20 +98,20 @@ Game.prototype.load=function()
 
 	for(var i=0;i<stage.drones;i++)
 	{
-		this.enemys.push(new Drone(Math.random()*50+i*20+20, -30, Math.random()*30+30));
+		this.enemys.push(new Drone(Math.random()*50+i*20+20, -30, Math.random()*100+30));
 	}
 	for(var i=0;i<stage.scouts;i++)
 	{
-		this.enemys.push(new Scout(Math.random()*50+i*20+20, -30,  Math.random()*30+30));
+		this.enemys.push(new Scout(Math.random()*50+i*20+20, -30,  Math.random()*100+30));
 	}
 
 	for(var i=0;i<stage.destructors;i++)
 	{
-		this.enemys.push(new Destructor(Math.random()*50+i*20+20, -30,  Math.random()*30+30));
+		this.enemys.push(new Destructor(Math.random()*50+i*20+20, -30,  Math.random()*100+30));
 	}
 	for(var i=0;i<stage.mothers;i++)
 	{
-		this.enemys.push(new Mothership(Math.random()*50+i*20+20, -30,  Math.random()*30+30));
+		this.enemys.push(new Mothership(Math.random()*50+i*20+20, -30,  Math.random()*100+30));
 	}
 	
 	for(var i=0;i<20; i++)
