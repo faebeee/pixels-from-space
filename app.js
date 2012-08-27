@@ -35,16 +35,8 @@ function Game()
 	this.particles=new Array();
 	this.renderer;
 	this.camera;
-	this.ball=
-	{
-		active:false,
-		x:0,
-		y:0,
-		vx:0,
-		vy:0,
-		w:10, 
-		h:10
-	};
+
+	this.gunsPerks=new Array();
 
 	this.screen=
 	{
@@ -62,9 +54,10 @@ function Game()
 }
 Game.prototype.loadStages=function()
 {
-	this.stages.push({scouts:3, drones:0, destructors:0, dialogs:["A/D move             Click to shoot       Enter to skip message", "Enemies incomming!", "Good luck capt'n"]});
-	this.stages.push({scouts:0, drones:3, destructors:0, dialogs:["Drones incomming...", "GO!"]});
-	this.stages.push({scouts:0, drones:0, destructors:2, dialogs:["Destructorships ahead", "Fireeeeeee!"]});
+	//this.stages.push({scouts:0, drones:0, destructors:0, mothers:1, dialogs:[]});
+	this.stages.push({scouts:3, drones:0, destructors:0, mothers:0, dialogs:["A/D move             Click to shoot       Enter to skip message", "Enemies incomming!", "Good luck capt'n"]});
+	this.stages.push({scouts:0, drones:3, destructors:0, mothers:0, dialogs:["Drones incomming...", "GO!"]});
+	this.stages.push({scouts:0, drones:0, destructors:2, mothers:0, dialogs:["Destructorships ahead", "Fireeeeeee!"]});
 	//this.stages.push({scouts:0, drones:0, destructors:0, dialogs:[]});//to test the final screen ;-)
 
 	this.load();
@@ -112,6 +105,10 @@ Game.prototype.load=function()
 	for(var i=0;i<stage.destructors;i++)
 	{
 		this.enemys.push(new Destructor(Math.random()*50+i*20+20, -30,  Math.random()*30+30));
+	}
+	for(var i=0;i<stage.mothers;i++)
+	{
+		this.enemys.push(new Mothership(Math.random()*50+i*20+20, -30,  Math.random()*30+30));
 	}
 	
 	for(var i=0;i<20; i++)
@@ -212,32 +209,6 @@ Game.prototype.render=function()
 		if(!_self.gameOver&&!_self.stageComplete)
 		{
 
-			if(_self.ball.active)
-			{
-				_self.ball.x+=_self.ball.vx;
-				_self.ball.y+=_self.ball.vy;
-
-				if(_self.collidesWithSide(_self.ball.x, _self.ball.y))
-				{
-					_self.ball.vx*=-1;
-				}
-				if(_self.collidesWithTop(_self.ball.x, _self.ball.y))
-				{
-					_self.ball.vy*=-1;
-				}
-				if(_self.collidesWithBottom(_self.ball.x, _self.ball.y))
-				{
-					_self.player.lifes--;
-					_self.ball.active=false;
-
-				}
-				if(_self.collides(_self.ball.x, _self.ball.y, _self.ball.w, _self.ball.h,  game.player.x,  game.player.y,  game.player.w,  game.player.h)&&game.player.alive)
-				{
-					_self.ball.vy*=-1;
-					_self.ball.vx=game.player.v.x/2;
-				}
-			}
-
 			for(var e in _self.enemys)
 			{
 				var enemy=_self.enemys[e];
@@ -248,12 +219,7 @@ Game.prototype.render=function()
 					_self.createExplosion(enemy.x, enemy.y);
 					_self.createParticles(enemy.x, enemy.y, getColor(255,200,100,1), 10, 10);
 				}
-				if(_self.collides(_self.ball.x, _self.ball.y, _self.ball.w, _self.ball.h,  enemy.x,  enemy.y, enemy.w,  enemy.h))
-				{
-					_self.enemys.splice(e,1);
-					//_self.createExplosion(_self.ball.x, _self.ball.y);
-					_self.createParticles(_self.ball.x, _self.ball.y, getColor(255,200,100,1), 10, 10);
-				}
+				
 			}
 		}
 	}
@@ -349,17 +315,7 @@ Game.prototype.draw=function()
 		}
 
 
-		if(_self.ball.active)
-		{
-			game.ctx.save();
-			game.ctx.translate(_self.ball.x+_self.ball.w/2, _self.ball.y+_self.ball.h/2);
-			game.ctx.shadowColor = "#00f";
-			game.ctx.shadowBlur = 10;
-			game.ctx.fillStyle="rgba(200,200,200,1)";
-			game.ctx.fillRect(-_self.ball.w/2, -_self.ball.h/2, _self.ball.w, _self.ball.h);
-			game.ctx.translate(-(_self.ball.x+_self.ball.w/2), -(_self.ball.y+_self.ball.h/2));
-			game.ctx.restore();
-		}
+		
 	}
 	
 
@@ -503,9 +459,11 @@ function Player(x,y, y2)
 	this.base=5;
 	this.r=(Math.PI*2)/1;
 	this.life=100;
+	this.perks=new Array();
 	this.guns=
 	[
 		new PlayerGun(this.base*0,this.base*0,((Math.PI*2)/4)*3),
+		new Rocketlauncher(this.base*1,this.base*7,((Math.PI*2)/4)*3),
 		new PlayerGun(this.base*4,this.base*0,((Math.PI*2)/4)*3),
 		
 	];
@@ -546,24 +504,19 @@ Player.prototype.draw=function()
 		gun.draw();
 	}
 
-	game.ctx.fillStyle="rgba(255,0,0,1)";
-	game.ctx.shadowBlur = 10;
 	game.ctx.shadowColor = "rgba(255,180,0,1)";
-	game.ctx.fillRect(game.screen.x-50, game.screen.y-50-this.life, 5, this.life);
+	game.ctx.shadowBlur = 10;
+	
 
-	for(var w in this.guns)
-	{
+	game.ctx.fillStyle="rgba(255,255,0,1)";
+	game.ctx.fillRect(game.screen.x-70, game.screen.y-25, (100/100)*50, 5)
 
-		var gun = this.guns[w];
-		
+	game.ctx.fillStyle="rgba(255,0,0,1)";
+	game.ctx.fillRect(game.screen.x-70, game.screen.y-25, (this.life/100)*50, 5);
+	;
 
-		game.ctx.fillStyle="rgba(255,255,0,1)";
-		game.ctx.fillRect(w*10+10, game.screen.y-50-gun.reloadSpeed, 5, gun.reloadSpeed);
-
-		game.ctx.fillStyle="rgba(255,0,0,1)";
-		game.ctx.fillRect(w*10+10, game.screen.y-50-gun.reloadSpeed, 5, gun.reloadStep);
-	}
-
+	game.ctx.font ="8pt Courier";
+	game.ctx.fillText("life "+this.life+"%", game.screen.x-150, game.screen.y-20)
 }
 Player.prototype.update=function()
 {
@@ -593,8 +546,12 @@ Player.prototype.update=function()
 
 	if(game.controller.keys["32"])//space
 	{
-		if(!game.ball.active)
-			game.spawnBall(this.x+this.w/2, this.y-this.h, this.v.x, -8);
+		for(var g in this.guns)
+		{
+			var gun=this.guns[g];
+			if(gun.name=="Rocketlauncher")
+				gun.shoot();
+		}
 	}
 
 
@@ -602,7 +559,7 @@ Player.prototype.update=function()
 	for(var g in this.guns)
 	{
 		var gun=this.guns[g];
-		gun.update();
+		this.guns[g].update();
 	}
 
 	if(game.isInScreen(this.x+this.w+this.v.x, this.y+this.h)&&game.isInScreen(this.x+this.v.x, this.y+this.h))
@@ -738,7 +695,6 @@ Enemy.prototype.shoot=function()
 	}
 }
 //*************************************************************************************
-
 Scout.prototype=new Enemy
 Scout.prototype.constructor=Enemy;
 function Scout(x,y, startY)
@@ -844,6 +800,58 @@ function Drone(x,y, startY)
 		{x:this.base*1, y:-this.base*1, w:this.base*3, h:this.base*1, color:getColor(100,100,255,1)},
 
 		{x:this.base*2+this.base/2, y:this.base*0, w:this.base, h:this.base, color:getColor(255,100,100,1)},
+	];
+}
+//*************************************************************************************
+Mothership.prototype=new Enemy
+Mothership.prototype.constructor=Enemy;
+function Mothership(x,y, startY)
+{
+	this.startY=startY;
+	this.x=x;
+	this.y=y;
+	this.vx=0.6;
+	this.vy=0;
+	this.w=40;
+	this.h=10;	
+	this.spread=4;
+	this.canShoot=false;
+	this.life=5000;
+	this.r=(Math.PI*2)/4;
+	this.base=5;
+	this.reload=Math.random()*20+10;
+	//this.reload=1;
+	this.dmg=20;
+
+	this.guns=
+	[
+		new LaserGun(this.base*1,this.base*7,((Math.PI*2)/4), 2),
+		new LaserGun(this.base*8,this.base*7,((Math.PI*2)/4), 2),
+		new GetlingGun(this.base*2,this.base*4,((Math.PI*2)/4), 2),
+		new GetlingGun(this.base*6,this.base*4,((Math.PI*2)/4), 2),
+	];
+	
+	this.tiles=
+	[
+
+		{x:this.base*1, y:this.base*-0.5, w:this.base*3, h:this.base*0.5, color:getColor(255,50,50,1)},
+		{x:this.base*5, y:this.base*-0.5, w:this.base*3, h:this.base*0.5, color:getColor(255,50,50,1)},
+
+		{x:this.base*1, y:this.base*0, w:this.base*3, h:this.base*1, color:getColor(100,100,255,1)},
+		{x:this.base*5, y:this.base*0, w:this.base*3, h:this.base*1, color:getColor(100,100,255,1)},
+
+		{x:this.base*-1, y:this.base*1, w:this.base*11, h:this.base*2, color:getColor(100,100,255,1)},
+		//guns
+		{x:this.base*0, y:this.base*3, w:this.base*1, h:this.base*4, color:getColor(100,100,255,1)},
+		{x:this.base*8, y:this.base*3, w:this.base*1, h:this.base*4, color:getColor(100,100,255,1)},
+		
+		{x:this.base*2, y:this.base*3, w:this.base*5, h:this.base*1, color:getColor(100,100,255,1)},
+		//guns
+		{x:this.base*2, y:this.base*4, w:this.base*1, h:this.base*2, color:getColor(100,100,255,1)},
+		{x:this.base*6, y:this.base*4, w:this.base*1, h:this.base*2, color:getColor(100,100,255,1)},
+
+		{x:this.base*4, y:this.base*4, w:this.base*1, h:this.base*1, color:getColor(100,100,255,1)},
+		{x:this.base*4, y:this.base*4, w:this.base*1, h:this.base*1, color:getColor(255,200,200,1)},
 	];
 }
 //*************************************************************************************
@@ -1045,6 +1053,27 @@ function PlayerGun(x,y,r)
 
 }
 PlayerGun.prototype=new GunBase();
+/////////////////////////////////////////////////////
+function Rocketlauncher(x,y,r)
+{
+	this.x=x;
+	this.y=y;
+	this.w=6;
+	this.h=18;
+	this.r=r;
+	this.reloadSpeed=300;
+	this.reloadStep=0;
+	this.bullets=new Array();
+	this.canShoot=true;
+	this.spread=2;
+	this.damage=100;
+	this.color=getColor(50,50,255, 1);
+	this.PLAYER_TYP=1;
+	this.ENEMY_TYP=2;
+	this.typ=this.PLAYER_TYP;
+	this.name="Rocketlauncher";
+}
+Rocketlauncher.prototype=new GunBase();
 //*************************************************************************************
 function StringSplitter(string, length)
 {
