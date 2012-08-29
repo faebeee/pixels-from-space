@@ -1,6 +1,7 @@
 /**
 	By Fabio Gianini
 */
+var base=5;
 function Game()
 {
 
@@ -36,7 +37,7 @@ function Game()
 	this.renderer;
 	this.camera;
 
-	this.gunsPerks=new Array();
+	this.perks=new Array();
 
 	this.screen=
 	{
@@ -48,18 +49,22 @@ function Game()
 
 	this.stars=new Array();
 	this.lines=new Image();
-	this.lines.src="./assets/crt_big.png";
+	this.lines.src="./assets/crt.png";
 	this.controller;
 	this.loadStages();
 }
 Game.prototype.loadStages=function()
 {
-	this.stages.push({scouts:0, drones:0, destructors:0, mothers:1, dialogs:[]});
+	//this.stages.push({scouts:0, drones:0, destructors:0, mothers:1, dialogs:[]});
 	this.stages.push({scouts:3, drones:0, destructors:0, mothers:0, dialogs:["A/D move             Click to shoot       Enter to skip message", "Enemies incomming!", "Good luck capt'n"]});
 	this.stages.push({scouts:0, drones:3, destructors:0, mothers:0, dialogs:["Drones incomming...", "GO!"]});
 	this.stages.push({scouts:0, drones:0, destructors:2, mothers:0, dialogs:["Destructorships ahead", "Fireeeeeee!"]});
 	this.stages.push({scouts:3, drones:4, destructors:1, mothers:0, dialogs:["Great. Now you'r ready for the invasion"]});
 	this.stages.push({scouts:3, drones:2, destructors:2, mothers:0, dialogs:["More enemies incomming"]});
+	this.stages.push({scouts:6, drones:4, destructors:0, mothers:0, dialogs:[]});
+	
+
+
 	this.stages.push({scouts:2, drones:6, destructors:1, mothers:1, dialogs:["Beware!"]});
 	//this.stages.push({scouts:0, drones:0, destructors:0, dialogs:[]});//to test the final screen ;-)
 
@@ -76,6 +81,7 @@ Game.prototype.load=function()
 	this.stars=new Array();
 	this.particles=new Array();
 	this.dialogs=new Array();
+	this.perks=new Array();
 	
 	this.dialogIndex=0;
 	this.locked=true;
@@ -98,20 +104,19 @@ Game.prototype.load=function()
 
 	for(var i=0;i<stage.drones;i++)
 	{
-		this.enemys.push(new Drone(Math.random()*50+i*20+20, -30, Math.random()*100+30));
+		this.enemys.push(new Drone((Math.random()*150)+i*20, -30, Math.random()*100+50));
 	}
 	for(var i=0;i<stage.scouts;i++)
 	{
-		this.enemys.push(new Scout(Math.random()*50+i*20+20, -30,  Math.random()*100+30));
+		this.enemys.push(new Scout((Math.random()*150)+i*20, -30, Math.random()*100+50));
 	}
-
 	for(var i=0;i<stage.destructors;i++)
 	{
-		this.enemys.push(new Destructor(Math.random()*50+i*20+20, -30,  Math.random()*100+30));
+		this.enemys.push(new Destructor((Math.random()*150)+i*20, -30, Math.random()*100+50));
 	}
 	for(var i=0;i<stage.mothers;i++)
 	{
-		this.enemys.push(new Mothership(Math.random()*50+i*20+20, -30,  Math.random()*100+30));
+		this.enemys.push(new Mothership((Math.random()*150)+i*20, -30, Math.random()*100+50));
 	}
 	
 	for(var i=0;i<20; i++)
@@ -139,6 +144,7 @@ Game.prototype.render=function()
 {
 	var _self=this;
 
+	//this.perks=[new TrippleShootPerk(200, 200)];
 	if(_self.finish)
 	{
 		if(!(_self.particles.lngth>0))
@@ -175,7 +181,6 @@ Game.prototype.render=function()
 				}
 				else
 					_self.locked=false;
-
 			}
 		}
 	}
@@ -193,8 +198,6 @@ Game.prototype.render=function()
 		else
 			_self.playerReady=true;
 	}
-
-
 	if(!_self.enemyiesReady&&!_self.locked)
 	{
 		for(var e in _self.enemys)
@@ -206,12 +209,10 @@ Game.prototype.render=function()
 			}
 		}
 	}
-
 	if(!_self.locked)
 	{
 		if(!_self.gameOver&&!_self.stageComplete)
 		{
-
 			for(var e in _self.enemys)
 			{
 				var enemy=_self.enemys[e];
@@ -222,11 +223,19 @@ Game.prototype.render=function()
 					_self.createExplosion(enemy.x, enemy.y);
 					_self.createParticles(enemy.x, enemy.y, getColor(255,200,100,1), 10, 10);
 				}
-				
 			}
 		}
 	}
-
+	for(var p in _self.perks)
+	{
+		var perk = _self.perks[p];
+		perk.onUpdate();
+		if(_self.collides(_self.player.x, _self.player.y, _self.player.w, _self.player.h, perk.x, perk.y, perk.width, perk.height));
+		{
+			perk.onCollect();
+			_self.perks.splice(p, 1);
+		}
+	}
 	for(var p in _self.particles)
 	{
 		var part=_self.particles[p];
@@ -315,13 +324,9 @@ Game.prototype.draw=function()
 		{
 			var enemy=_self.enemys[e];
 			enemy.draw();
-		}
-
-
-		
+		}	
 	}
 	
-
 	if(_self.gameComplete)
 	{
 		_self.player.v.y-=0.5;
@@ -341,6 +346,12 @@ Game.prototype.draw=function()
 			_self.createParticles(Math.random()*_self.screen.x, Math.random()*_self.screen.y, {r:Math.round(Math.random()*255), g:Math.round(Math.random()*255), b:Math.round(Math.random()*255), a:1}, 10, 10);
 		game.ctx.fillStyle = "#ffff00";
 		game.ctx.fillText("Stage complete", _self.screen.x/2-120, _self.screen.y/2);
+	}
+
+	for(var p in _self.perks)
+	{
+		var perk = _self.perks[p];
+		perk.onDraw();
 	}
 
 	if(_self.player.alive)
@@ -370,30 +381,6 @@ Game.prototype.areEnemysAlive=function()
 {
 	return(this.enemys.length>0);
 }
-Game.prototype.collidesWithBottom=function(x,y,w,h)
-{
-	if(y>this.screen.y)
-	{
-		return true;
-	}
-	return false;
-}
-Game.prototype.collidesWithTop=function(x,y,w,h)
-{
-	if(y<0)
-	{
-		return true;
-	}
-	return false;
-}
-Game.prototype.collidesWithSide=function(x,y,w,h)
-{
-	if(x<0||x>game.screen.x)
-	{
-		return true;
-	}
-	return false;
-}
 Game.prototype.isInScreen=function(x,y)
 {
 	if(x>0&&x<this.screen.x&&
@@ -405,8 +392,7 @@ Game.prototype.isInScreen=function(x,y)
 }
 Game.prototype.collides=function(x,y,w,h, x1,y1,w1,h1)
 {
-	if(x+w>x1&&x<x1+w1&&
-		y+h>y1&&y<y1+h1)
+	if(x+w>x1&&x<x1+w1&&y+h>y1&&y<y1+h1)
 	{
 		return true;
 	}
@@ -454,7 +440,7 @@ function Player(x,y, y2)
 	this.startY=y;
 	this.x=x;
 	this.y=y2;
-	this.w=20;
+	this.w=25;
 	this.h=10;
 	this.spread=4;
 	this.lifes=3;
@@ -463,13 +449,10 @@ function Player(x,y, y2)
 	this.r=(Math.PI*2)/1;
 	this.life=100;
 	this.perks=new Array();
-	this.guns=
-	[
-		new PlayerGun(this.base*0,this.base*0,((Math.PI*2)/4)*3),
-		new Rocketlauncher(this.base*1,this.base*7,((Math.PI*2)/4)*3),
-		new PlayerGun(this.base*4,this.base*0,((Math.PI*2)/4)*3),
-		
-	];
+	
+	var gunConf= new DoubleShoot();
+	this.guns=gunConf.guns;
+
 	this.tiles=
 	[
 		{x:this.base*0, y:this.base*0, w:this.base*5, h:this.base*1, color:getColor(255,255,255,1)},
@@ -529,6 +512,19 @@ Player.prototype.update=function()
 		game.createExplosion(this.x+this.w/2, this.y)
 		this.alive=false;
 	}
+	if(game.controller.keys["87"])
+	{
+		this.v.y=-5;
+	}
+	else
+	{
+		this.v.y=0;
+	}
+	if(game.controller.keys["83"])
+	{
+		this.v.y=5;
+	}
+
 	if(game.controller.keys["65"])
 	{
 		this.v.x=-5;
@@ -542,10 +538,9 @@ Player.prototype.update=function()
 		this.v.x=0;
 	}
 
-	if(game.controller.leftDown)//space
-	{
-		game.player.shoot();
-	}
+	
+	game.player.shoot();
+	
 
 	if(game.controller.keys["32"])//space
 	{
@@ -557,7 +552,6 @@ Player.prototype.update=function()
 		}
 	}
 
-
 	//update guns
 	for(var g in this.guns)
 	{
@@ -565,7 +559,8 @@ Player.prototype.update=function()
 		this.guns[g].update();
 	}
 
-	if(game.isInScreen(this.x+this.w+this.v.x, this.y+this.h)&&game.isInScreen(this.x+this.v.x, this.y+this.h))
+	if(game.isInScreen(this.x+this.w+this.v.x, this.y+this.h)&&game.isInScreen(this.x+this.v.x, this.y+this.h)
+		&&game.isInScreen(this.x, this.y+this.h+this.v.y)&&game.isInScreen(this.x, this.y+this.v.y))
 	{
 		this.x+=this.v.x;	
 		this.y+=this.v.y;	
@@ -748,7 +743,7 @@ function Destructor(x,y, startY)
 	this.h=10;	
 	this.spread=4;
 	this.canShoot=false;
-	this.life=1500;
+	this.life=800;
 	this.r=(Math.PI*2)/4;
 	this.base=5;
 	this.reload=Math.random()*20+10;
@@ -819,7 +814,7 @@ function Mothership(x,y, startY)
 	this.h=10;	
 	this.spread=4;
 	this.canShoot=false;
-	this.life=5000;
+	this.life=1000;
 	this.r=(Math.PI*2)/4;
 	this.base=5;
 	this.reload=Math.random()*20+10;
@@ -919,24 +914,17 @@ GunBase.prototype.update=function()
 			bullet.x+=Math.cos(bullet.r)*bullet.v;
 			bullet.y+=Math.sin(bullet.r)*bullet.v;
 
-			if(this.typ==this.PLAYER_TYP)
+			for(var e in game.enemys)
 			{
-				for(var e in game.enemys)
+				var enemy = game.enemys[e];
+				if(game.collides(bullet.x, bullet.y, this.w, this.h, enemy.x, enemy.y, enemy.w, enemy.h))
 				{
-					var enemy = game.enemys[e];
-					if(game.collides(bullet.x, bullet.y, this.w, this.h, enemy.x, enemy.y, enemy.w, enemy.h))
-					{
-						rmv=false;
-						game.createParticles(bullet.x, bullet.y, getColor(255,50,0,1), 20, 10);
-						game.createParticles(bullet.x, bullet.y, getColor(255,250,0,1), 5, 5);
-						enemy.life-=this.damage;
-						bullet.active=false;
-					}
-					
+					rmv=false;
+					game.createParticles(bullet.x, bullet.y, getColor(255,50,0,1), 20, 10);
+					game.createParticles(bullet.x, bullet.y, getColor(255,250,0,1), 5, 5);
+					enemy.life-=this.damage;
+					bullet.active=false;
 				}
-			}
-			if(this.typ==this.ENEMY_TYP)
-			{
 				if(game.collides(bullet.x, bullet.y, this.w, this.h, game.player.x, game.player.y, game.player.w, game.player.h))
 				{
 					game.createParticles(bullet.x, bullet.y, getColor(255,50,0,1), 20, 10);
@@ -976,7 +964,7 @@ function LaserGun(x,y,r, gunTyp)
 	this.w=2;
 	this.h=8;
 	this.r=r;
-	this.reloadSpeed=Math.random()*15;
+	this.reloadSpeed=Math.random()*15+15;
 	this.reloadStep=0;
 	this.bullets=new Array();
 	this.canShoot=true;
@@ -1020,7 +1008,7 @@ function GetlingGun(x,y,r, gunTyp)
 	this.w=4;
 	this.h=6;
 	this.r=r;
-	this.reloadSpeed=Math.random()*5+5;
+	this.reloadSpeed=Math.random()*5+15;
 	this.reloadStep=0;
 	this.bullets=new Array();
 	this.canShoot=true;
@@ -1042,7 +1030,7 @@ function PlayerGun(x,y,r)
 	this.w=4;
 	this.h=6;
 	this.r=r;
-	this.reloadSpeed=3;
+	this.reloadSpeed=8;
 	this.reloadStep=0;
 	this.bullets=new Array();
 	this.canShoot=true;
@@ -1057,26 +1045,30 @@ function PlayerGun(x,y,r)
 }
 PlayerGun.prototype=new GunBase();
 /////////////////////////////////////////////////////
-function Rocketlauncher(x,y,r)
+function TrippleShoot()
 {
-	this.x=x;
-	this.y=y;
-	this.w=6;
-	this.h=18;
-	this.r=r;
-	this.reloadSpeed=300;
-	this.reloadStep=0;
-	this.bullets=new Array();
-	this.canShoot=true;
-	this.spread=2;
-	this.damage=100;
-	this.color=getColor(50,50,255, 1);
-	this.PLAYER_TYP=1;
-	this.ENEMY_TYP=2;
-	this.typ=this.PLAYER_TYP;
-	this.name="Rocketlauncher";
+	this.guns=
+	[
+
+		new PlayerGun(base*0, base*0, ((Math.PI*2)/4)*2.8),
+		new PlayerGun(base*2, base*0,((Math.PI*2)/4)*3),
+		new PlayerGun(base*4, base*0,((Math.PI*2)/4)*3.2),
+	]
 }
-Rocketlauncher.prototype=new GunBase();
+function DoubleShoot()
+{
+	this.guns=
+	[
+
+		new PlayerGun(base*0, base*0, ((Math.PI*2)/4)*3),
+		new PlayerGun(base*4, base*0,((Math.PI*2)/4)*3),
+	]
+}
+
+/////////////////////////////////////////////////////
+
+
+
 //*************************************************************************************
 function StringSplitter(string, length)
 {
