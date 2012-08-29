@@ -341,9 +341,8 @@ Game.prototype.draw=function()
 	}
 	else if(_self.stageComplete)
 	{
-		_self.player.v.y-=0.5;
-		if(!_self.finish)
-			_self.createParticles(Math.random()*_self.screen.x, Math.random()*_self.screen.y, {r:Math.round(Math.random()*255), g:Math.round(Math.random()*255), b:Math.round(Math.random()*255), a:1}, 10, 10);
+		
+		_self.createParticles(Math.random()*_self.screen.x, Math.random()*_self.screen.y, {r:Math.round(Math.random()*255), g:Math.round(Math.random()*255), b:Math.round(Math.random()*255), a:1}, 10, 10);
 		game.ctx.fillStyle = "#ffff00";
 		game.ctx.fillText("Stage complete", _self.screen.x/2-120, _self.screen.y/2);
 	}
