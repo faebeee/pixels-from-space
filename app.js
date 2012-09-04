@@ -1,10 +1,11 @@
 /**
+	Pixels from outerspace
+	JS13k games
 	By Fabio Gianini
 */
 var base=5;
 function Game()
 {
-
 	this.canvas=document.getElementById("screen");
 	this.ctx=this.canvas.getContext("2d");
 
@@ -36,6 +37,19 @@ function Game()
 	this.particles=new Array();
 	this.renderer;
 	this.camera;
+	this.ball;
+
+	this.glow=
+	{
+		max:20,
+		min:5,
+		value:5,
+		fac:1,
+	}
+
+	this.state;
+
+	this.score=0;
 
 	this.perks=new Array();
 
@@ -56,15 +70,18 @@ function Game()
 Game.prototype.loadStages=function()
 {
 	//this.stages.push({scouts:0, drones:0, destructors:0, mothers:1, dialogs:[]});
-	this.stages.push({scouts:3, drones:0, destructors:0, mothers:0, dialogs:["A/D move             Click to shoot       Enter to skip message", "Enemies incomming!", "Good luck capt'n"]});
+	this.stages.push({scouts:3, drones:0, destructors:0, mothers:0, dialogs:["A/W/S/D move         Enter to skip message", "Enemies incomming!", "Warning! Don't let   the ball behind you","One more thing       capt'n teerex rainbow", "Good luck"]});
 	this.stages.push({scouts:0, drones:3, destructors:0, mothers:0, dialogs:["Drones incomming...", "GO!"]});
 	this.stages.push({scouts:0, drones:0, destructors:2, mothers:0, dialogs:["Destructorships ahead", "Fireeeeeee!"]});
-	this.stages.push({scouts:3, drones:4, destructors:1, mothers:0, dialogs:["Great. Now you'r ready for the invasion"]});
-	this.stages.push({scouts:3, drones:2, destructors:2, mothers:0, dialogs:["More enemies incomming"]});
-	this.stages.push({scouts:6, drones:4, destructors:0, mothers:0, dialogs:[]});
-	
-
-
+	this.stages.push({scouts:3, drones:4, destructors:1, mothers:0, dialogs:["Great. Now you are   ready for the        invasion"]});
+	this.stages.push({scouts:3, drones:2, destructors:2, mothers:0, dialogs:["Enemies incomming"]});
+	this.stages.push({scouts:3, drones:2, destructors:0, mothers:0, dialogs:[]});
+	this.stages.push({scouts:0, drones:0, destructors:0, mothers:1, dialogs:["Mothership ahead"]});
+	this.stages.push({scouts:2, drones:2, destructors:1, mothers:0, dialogs:[]});
+	this.stages.push({scouts:2, drones:2, destructors:2, mothers:0, dialogs:[]});
+	this.stages.push({scouts:2, drones:8, destructors:0, mothers:0, dialogs:[]});
+	this.stages.push({scouts:2, drones:4, destructors:0, mothers:1, dialogs:[]});
+	this.stages.push({scouts:4, drones:2, destructors:1, mothers:1, dialogs:[]});
 	this.stages.push({scouts:2, drones:6, destructors:1, mothers:1, dialogs:["Beware!"]});
 	//this.stages.push({scouts:0, drones:0, destructors:0, dialogs:[]});//to test the final screen ;-)
 
@@ -124,54 +141,39 @@ Game.prototype.load=function()
 		this.stars.push({x:Math.random()*this.screen.x, y:Math.random()*this.screen.y, v:Math.random()*5});
 	}
 
+	this.ball=new Ball(this.screen.x/2, this.screen.y/2);
+	this.ball.v.x=Math.random()*-5;
+	this.ball.v.y=Math.random()*-5-5;
 	this.player=new Player(this.screen.x/2, this.screen.y-50, this.screen.y+50);	
+	this.state="dialog";
 	this.renderer=setInterval('game.render()', 1000/23);
 
-}
-Game.prototype.spawnBall=function(x, y, vx, vy)
-{
-	if(!this.ball.active)
-	{
-		this.ball.active=true;
-		this.ball.x=x;
-		this.ball.y=y;
-		this.ball.vx=vx;
-		this.ball.vy=vy;
-	}
-	
 }
 Game.prototype.render=function()
 {
 	var _self=this;
 
-	//this.perks=[new TrippleShootPerk(200, 200)];
-	if(_self.finish)
+	if(_self.state=="complete")
 	{
-		if(!(_self.particles.lngth>0))
-		{
-			_self.finishTimeoutStep++;
-			if(_self.finishTimeoutStep>=_self.finishTimeout)
-				nextLevel();
-		}
+		_self.finishTimeoutStep++;
+		if(_self.finishTimeoutStep>=_self.finishTimeout)
+			nextLevel();
+		
 	}
-
+	//stage complete if there were no more enemies alive
 	if(!_self.areEnemysAlive())
 	{
 		_self.stageCompleteTimeoutStep++;
 		if(_self.stageCompleteTimeoutStep>_self.stageCompleteTimeout)
-			_self.stageComplete=true;
+			_self.state="complete";
 	}
 
 	if(!(_self.player.life>0))
-		_self.player.alive=false;
+		_self.state="gameover"
 
-	if(_self.player.alive)
+	if(_self.state=="dialog")
 	{
-		if(!_self.locked)
-			_self.player.update();
-		else
-		{
-			if(_self.controller.keys["13"])
+		if(_self.controller.keys["13"])
 			{
 				if(_self.dialogIndex<_self.dialogs.length-1)
 				{
@@ -180,26 +182,49 @@ Game.prototype.render=function()
 					_self.controller.keys["13"]=false;
 				}
 				else
-					_self.locked=false;
+					_self.state="intro";
 			}
-		}
-	}
-	else
-	{
-		_self.gameOver=true;
 	}
 
-	if(!_self.playerReady&&!_self.locked)
+	if(_self.state=="running")
 	{
+		for(var e in _self.enemys)
+		{
+			var enemy=_self.enemys[e];
+			enemy.update();
+			//kills enemy if it collides with the ball
+			if(_self.collides(enemy.x, enemy.y, enemy.w, enemy.h, _self.ball.x-_self.ball.bounds.x/2, _self.ball.y-_self.ball.bounds.y/2, _self.ball.bounds.x, _self.ball.bounds.y))
+			{
+				enemy.life=-1;
+			}
+			//removes enemy if live < 0= is dead
+			if(enemy.life<0)
+			{
+				_self.enemys.splice(e,1);
+				_self.createExplosion(enemy.x, enemy.y);
+				_self.createParticles(enemy.x, enemy.y, getColor(255,200,100,1), 10, 10);
+			}
+		}	
+
+		_self.ball.onUpdate();
+		_self.player.update();
+	}
+
+	if(_self.state=="intro")
+	{
+		//player intro animation
 		if(_self.player.y>_self.player.startY)
 		{
 			_self.player.y-=5;
 		}
 		else
-			_self.playerReady=true;
+		{
+			_self.state="running";
+		}	
 	}
-	if(!_self.enemyiesReady&&!_self.locked)
+	if(_self.state=="intro"||_self.state=="running")
 	{
+		//enemies intro animation
 		for(var e in _self.enemys)
 		{
 			var enemy=_self.enemys[e];
@@ -209,33 +234,8 @@ Game.prototype.render=function()
 			}
 		}
 	}
-	if(!_self.locked)
-	{
-		if(!_self.gameOver&&!_self.stageComplete)
-		{
-			for(var e in _self.enemys)
-			{
-				var enemy=_self.enemys[e];
-				enemy.update();
-				if(enemy.life<0)
-				{
-					_self.enemys.splice(e,1);
-					_self.createExplosion(enemy.x, enemy.y);
-					_self.createParticles(enemy.x, enemy.y, getColor(255,200,100,1), 10, 10);
-				}
-			}
-		}
-	}
-	for(var p in _self.perks)
-	{
-		var perk = _self.perks[p];
-		perk.onUpdate();
-		if(_self.collides(_self.player.x, _self.player.y, _self.player.w, _self.player.h, perk.x, perk.y, perk.width, perk.height));
-		{
-			perk.onCollect();
-			_self.perks.splice(p, 1);
-		}
-	}
+
+	//update particles
 	for(var p in _self.particles)
 	{
 		var part=_self.particles[p];
@@ -243,16 +243,18 @@ Game.prototype.render=function()
 		part.y+=part.vy;
 		part.life--;
 		part.color.a-=0.01;
+		//remove particle
 		if(!_self.isInScreen(part.x, part.y)||(part.color.a<0))
 		{
 			_self.particles.splice(p,1);
 		}
+
 		if(part.life<0)
 		{
 			_self.particles.splice(p,1);				
 		}
 	}
-
+	//update stars
 	for(var s in _self.stars)
 	{
 		var star=_self.stars[s];
@@ -263,6 +265,13 @@ Game.prototype.render=function()
 		}
 		star.y+=star.v;
 	}
+
+	if(_self.glow.value<_self.glow.min||_self.glow.value>_self.glow.max)
+	{
+		_self.glow.fac*=-1;
+	}
+	_self.glow.value+=_self.glow.fac;
+
 
 	_self.draw();
 }
@@ -311,63 +320,77 @@ Game.prototype.draw=function()
 		game.ctx.translate(-(part.x+part.w/2), -(part.y+part.h/2));
 		game.ctx.restore();
 	}
-
-	if(_self.gameOver)
+	//prints gameover string to screen
+	if(_self.state=="gameover")
 	{
 		game.ctx.fillStyle = "#ff0000";
-		game.ctx.fillText("Game Over", _self.screen.x/2-100, _self.screen.y/2);
+		game.ctx.fillText("Game Over", _self.screen.x/2-80, _self.screen.y/2);
+		game.ctx.fillText("Your score "+_self.score, _self.screen.x/2-80, _self.screen.y/2+40);
 	}
-
-	if(!_self.gameOver&&!_self.stageComplete)
+	//render enemies while running
+	if(_self.state=="running"||_self.state=="intro")
 	{
 		for(var e in _self.enemys)
 		{
 			var enemy=_self.enemys[e];
 			enemy.draw();
 		}	
+
+		_self.ball.onDraw();
+		_self.player.draw();
+
+
+		game.ctx.fillStyle="rgba(200,200,200,1)";
+		game.ctx.shadowColor = "#ccc";
+		game.ctx.fillRect(10,10, game.ball.bounds.x, game.ball.bounds.y);
+
+		game.ctx.font ="bold 14pt Courier";
+		game.ctx.fillStyle = "#333";
+		game.ctx.fillText("x "+game.score, 15+game.ball.bounds.x, 10+game.ball.bounds.y);
+
+		game.ctx.font ="bold 14pt Courier";
+		game.ctx.fillStyle = "#333";
+		game.ctx.fillText((game.stageIndex+1)+"/"+game.stages.length+" Stages", game.screen.x-130, 30);
 	}
-	
-	if(_self.gameComplete)
+	//print string to screen when all stages were cleared
+	if(_self.state=="gamecomplete")
 	{
-		_self.player.v.y-=0.5;
-		if(!_self.finish)
-			_self.createParticles(Math.random()*_self.screen.x, Math.random()*_self.screen.y, {r:Math.round(Math.random()*255), g:Math.round(Math.random()*255), b:Math.round(Math.random()*255), a:1}, 10, 10);
+		
+		//_self.createParticles(Math.random()*_self.screen.x, Math.random()*_self.screen.y, {r:Math.round(Math.random()*255), g:Math.round(Math.random()*255), b:Math.round(Math.random()*255), a:1}, 10, 10);
+	
 		game.ctx.fillStyle = "#ffff00";
 		game.ctx.fillText("Game complete", _self.screen.x/2-120, _self.screen.y/2);
 
+		game.ctx.shadowBlur=_self.glow.value;
 		game.ctx.font ="bold 14pt Courier";
 		game.ctx.fillText("Pixels from outerspace", _self.screen.x/2-120, _self.screen.y/2+20);
-		game.ctx.fillText("By Fabio Gianini", _self.screen.x/2-120, _self.screen.y/2+40);
+		game.ctx.fillText("Your score "+_self.score, _self.screen.x/2-120, _self.screen.y/2+40);
 	}
-	else if(_self.stageComplete)
+	//print stage complete string
+	if(_self.state=="complete")
 	{
 		
 		_self.createParticles(Math.random()*_self.screen.x, Math.random()*_self.screen.y, {r:Math.round(Math.random()*255), g:Math.round(Math.random()*255), b:Math.round(Math.random()*255), a:1}, 10, 10);
 		game.ctx.fillStyle = "#ffff00";
+		game.ctx.shadowBlur=_self.glow.value;
 		game.ctx.fillText("Stage complete", _self.screen.x/2-120, _self.screen.y/2);
 	}
 
-	for(var p in _self.perks)
-	{
-		var perk = _self.perks[p];
-		perk.onDraw();
-	}
 
-	if(_self.player.alive)
-		_self.player.draw();
-	
-	if(_self.locked)
+	if(_self.state=="dialog")
 	{
 		game.ctx.fillStyle="rgba(200,200,200,0.7)";
-		game.ctx.shadowColor = "#00f";
-		game.ctx.fillRect(0, _self.screen.y-100, _self.screen.x, _self.screen.y-(_self.screen.y-100));
+		game.ctx.shadowColor = "#ccc";
+		game.ctx.shadowBlur=_self.glow.value;
+		game.ctx.fillRect(10, _self.screen.y-100, _self.screen.x-20, _self.screen.y-(_self.screen.y-90));
 
 		game.ctx.font ="bold 10pt Courier";
 		game.ctx.fillStyle = "#333";
+		game.ctx.shadowBlur=0;
 		var parts=StringSplitter(_self.currentDialog, 21);
 		for(var p in parts)
 		{
-			game.ctx.fillText(">> "+parts[p], 5, _self.screen.y-85+(p*12));
+			game.ctx.fillText(">> "+parts[p], 15, _self.screen.y-85+(p*12));
 		}
 	}
 
@@ -1065,7 +1088,93 @@ function DoubleShoot()
 }
 
 /////////////////////////////////////////////////////
+function Ball(x,y)
+{
+	this.spawn=
+	{
+		x:x,
+		y:y
+	}
+	this.v=
+	{
+		x:0,
+		y:0,
+		max:1,
+		dir:0,
+	}
+	this.bounds=
+	{
+		x:10,
+		y:10,
+	}
+	this.direction=1;
+	this.x=x;
+	this.y=y;
+	this.glow=
+	{
+		max:20,
+		min:5,
+		value:5,
+		fac:1,
+	}
+}
+Ball.prototype.onUpdate=function()
+{
+	this.x+=this.v.x;
+	this.y+=this.v.y;
 
+	
+
+	if(this.y+this.v.y<=0)
+	{
+		this.v.y*=-1;
+		this.v.dir=1;
+		game.score++;
+
+	}
+
+	if(this.x-this.bounds.x/2<=0||this.x+this.bounds.x/2>=game.screen.x)
+	{
+		this.v.x*=-1;
+	}
+
+	if(this.glow.value<this.glow.min||this.glow.value>this.glow.max)
+	{
+		this.glow.fac*=-1;
+	}
+	this.glow.value+=this.glow.fac;
+
+	if(!game.isInScreen(this.x, this.y+this.v.y, this.bounds.x, this.bounds.y))
+	{
+		game.score=0;
+		this.create();
+	}
+	if(game.collides(this.x-this.bounds.x/2, this.y+this.v.y-this.bounds.y/2, this.bounds.x, this.bounds.y, game.player.x, game.player.y, game.player.w, game.player.h))
+	{
+		this.v.y*=-1;
+		this.v.dir=-1;
+	}
+
+}
+Ball.prototype.onDraw=function()
+{
+	game.ctx.translate((this.x-this.bounds.x/2), (this.y-this.bounds.y/2));
+
+	game.ctx.fillStyle="rgba(200,200,200,1)";
+	game.ctx.shadowColor = "rgba(200,200,200,1)";
+	game.ctx.shadowBlur = this.glow.value;
+		
+	game.ctx.fillRect(0,0, this.bounds.x, this.bounds.y);
+
+	game.ctx.translate(-(this.x-this.bounds.x/2), -(this.y-this.bounds.y/2))
+
+}
+Ball.prototype.create=function()
+{
+	this.x=this.spawn.x;
+	this.y=this.spawn.y;
+	
+}
 
 
 //*************************************************************************************
@@ -1088,6 +1197,7 @@ function StringSplitter(string, length)
 	}
 	return parts;
 }
+//*************************************************************************************
 var game;
 function start()
 {
@@ -1110,7 +1220,6 @@ function nextLevel()
 	else
 	{
 		//clearInterval(game.renderer);
-		game.stageComplete=false;
-		game.gameComplete=true;
+		game.state="gamecomplete";
 	}
 }
